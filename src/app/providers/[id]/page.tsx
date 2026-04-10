@@ -216,6 +216,9 @@ export default function ProviderDetailPage() {
                             <div className="w-32 h-32 rounded-3xl overflow-hidden shrink-0 relative group-hover:scale-105 transition-transform duration-500 shadow-2xl">
                                 <img src={meal.image || "https://images.unsplash.com/photo-1546241072-48010ad28c2c?w=400"} className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 bg-black/20" />
+                                <div className="absolute top-2 right-2 px-2 py-0.5 rounded-lg glass-card border-white/10 text-white font-black text-[8px] flex items-center gap-1 shadow-2xl backdrop-blur-xl">
+                                  <Star className="w-2 h-2 text-orange-500 fill-current" /> {(meal as any).avgRating > 0 ? (meal as any).avgRating : 'New'}
+                                </div>
                             </div>
                             
                             <div className="flex-1 flex flex-col justify-between py-1">

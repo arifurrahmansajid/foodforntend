@@ -210,7 +210,7 @@ export default function Home() {
                     className="w-full h-full object-cover grayscale transition-all duration-700 group-hover:grayscale-0 group-hover:scale-110" 
                   />
                   <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full glass-card border-white/10 text-white font-black text-[10px] flex items-center gap-1 shadow-2xl backdrop-blur-xl">
-                    <Star className="w-3 h-3 text-orange-500 fill-current" /> 4.9
+                    <Star className="w-3 h-3 text-orange-500 fill-current" /> {(meal as any).avgRating > 0 ? (meal as any).avgRating : 'New'}
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-[#020617] to-transparent opacity-60" />
                 </div>

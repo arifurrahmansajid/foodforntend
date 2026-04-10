@@ -5,7 +5,7 @@ import { Button, Card, Input } from "@/components/ui";
 import {
   Plus, Utensils, Trash2, Edit, Eye, Save, X,
   Image as ImageIcon, LayoutGrid, List, Loader2,
-  Store, ChevronDown, Check,
+  Store, ChevronDown, Check, SlidersHorizontal,
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -414,19 +414,23 @@ export default function ProviderMenu() {
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-600 group-focus-within/field:text-orange-500 transition-colors ml-1">Price ($) *</label>
                 <Input required value={price} onChange={(e) => setPrice(e.target.value)} placeholder="e.g. 24.99" className="h-14 rounded-2xl bg-white/[0.03] border-white/5 font-bold text-slate-100 placeholder:text-slate-800" />
               </div>
-              <div className="space-y-2 group/field">
+              <div className="space-y-2 group/field relative">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-600 group-focus-within/field:text-orange-500 transition-colors ml-1">Category</label>
-                <select
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                  className="w-full h-14 rounded-2xl bg-white/[0.03] border border-white/5 px-4 text-slate-100 font-bold focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all appearance-none"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
-                >
-                  <option value="" className="bg-slate-900">— No Category —</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id} className="bg-slate-900">{cat.name}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
+                    className="w-full h-14 rounded-2xl bg-white/[0.03] border border-white/5 px-4 pr-10 text-slate-100 font-bold focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="" className="bg-slate-900">— No Category —</option>
+                    {[...categories].sort((a,b) => a.name.localeCompare(b.name)).map((cat) => (
+                      <option key={cat.id} value={cat.id} className="bg-slate-900">{cat.name}</option>
+                    ))}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 group-hover/field:text-orange-500 transition-colors">
+                    <ChevronDown className="w-5 h-5" />
+                  </div>
+                </div>
               </div>
               <div className="space-y-2 group/field sm:col-span-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-600 group-focus-within/field:text-orange-500 transition-colors ml-1">Description *</label>

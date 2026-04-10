@@ -114,7 +114,7 @@ export default function MealsPage() {
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 grayscale group-hover:grayscale-0"
                     />
                     <div className="absolute top-4 right-4 px-2.5 py-1 rounded-full glass-card border-white/10 text-white font-black text-[10px] flex items-center gap-1 shadow-2xl backdrop-blur-xl">
-                      <Star className="w-3 h-3 text-orange-500 fill-current" /> 4.8
+                      <Star className="w-3 h-3 text-orange-500 fill-current" /> {(meal as any).avgRating > 0 ? (meal as any).avgRating : 'New'}
                     </div>
                 </div>
                 <div className="p-6 flex flex-col flex-1">

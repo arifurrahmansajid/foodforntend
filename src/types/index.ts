@@ -26,6 +26,8 @@ export interface Meal {
   providerId: string;
   provider?: Provider;
   rating?: number;
+  avgRating?: number;
+  reviews?: any[];
 }
 
 export interface Provider {
