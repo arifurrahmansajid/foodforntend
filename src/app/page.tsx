@@ -8,9 +8,13 @@ import { mealsApi } from "@/lib/api";
 import { Meal } from "@/types";
 import toast from "react-hot-toast";
 import { useCart } from "@/hooks/use-store";
+import { reviewsApi } from "@/lib/api";
+import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, Quote } from "lucide-react";
 
 export default function Home() {
   const [featuredMeals, setFeaturedMeals] = useState<Meal[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const { addItem } = useCart();
 
@@ -24,12 +28,16 @@ export default function Home() {
   ];
 
   useEffect(() => {
-    const fetchFeatured = async () => {
+    const fetchHomeData = async () => {
       try {
         setIsLoading(true);
-        const response = await mealsApi.getAll();
-        // Take the top 3 as "featured"
-        setFeaturedMeals(response.data.data.meals.slice(0, 3) || []);
+        const [mealsRes, reviewsRes] = await Promise.all([
+          mealsApi.getAll(),
+          reviewsApi.getAll()
+        ]);
+        
+        setFeaturedMeals(mealsRes.data.data.meals.slice(0, 3) || []);
+        setReviews(reviewsRes.data.data.reviews || []);
       } catch (error) {
         console.error("Home Feed Error:", error);
         // Fallback for visual stability
@@ -43,8 +51,16 @@ export default function Home() {
       }
     };
 
-    fetchFeatured();
+    fetchHomeData();
   }, []);
+
+  const nextReview = () => {
+    setCurrentReviewIndex((prev) => (prev + 1) % reviews.length);
+  };
+
+  const prevReview = () => {
+    setCurrentReviewIndex((prev) => (prev - 1 + reviews.length) % reviews.length);
+  };
 
   const handleAddToCart = (meal: any) => {
     addItem({
@@ -198,27 +214,103 @@ export default function Home() {
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-[#020617] to-transparent opacity-60" />
                 </div>
-                <div className="p-8">
-                  <div className="flex justify-between items-start mb-6">
-                    <div>
-                      <h3 className="text-2xl font-bold text-white font-[family-name:var(--font-display)] tracking-tight mb-1 uppercase leading-tight group-hover:text-orange-500 transition-colors">{meal.name}</h3>
-                      <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest opacity-80">{(meal as any).provider?.name || "Premium Kitchen"}</p>
+                  <div className="p-8">
+                    <div className="flex justify-between items-start mb-6">
+                      <div>
+                        <Link href={`/meals/${meal.id}`}>
+                          <h3 className="text-2xl font-bold text-white font-[family-name:var(--font-display)] tracking-tight mb-1 uppercase leading-tight hover:text-orange-500 transition-colors cursor-pointer">{meal.name}</h3>
+                        </Link>
+                        <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest opacity-80">{(meal as any).provider?.name || "Premium Kitchen"}</p>
+                      </div>
+                      <span className="text-2xl font-black text-orange-500">${meal.price.toFixed(2)}</span>
                     </div>
-                    <span className="text-2xl font-black text-orange-500">${meal.price.toFixed(2)}</span>
+                    
+                    <div className="flex gap-3">
+                      <Button 
+                        onClick={() => handleAddToCart(meal)}
+                        className="flex-1 h-14 rounded-2xl flex items-center justify-center gap-3 group/btn relative overflow-hidden transition-all shadow-[0_10px_30px_-10px_rgba(234,88,12,0.4)]"
+                      >
+                         <ShoppingCart className="w-5 h-5 relative z-10" />
+                         <span className="relative z-10 font-black uppercase tracking-widest text-[10px]">Add to Order</span>
+                      </Button>
+                      <Link href={`/meals/${meal.id}`}>
+                        <Button variant="outline" className="h-14 w-14 p-0 rounded-2xl border-white/10 text-slate-500 hover:text-white transition-all">
+                          <ArrowRight className="w-5 h-5" />
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
-                  <Button 
-                    onClick={() => handleAddToCart(meal)}
-                    className="w-full h-14 rounded-2xl flex items-center justify-center gap-3 group/btn relative overflow-hidden transition-all shadow-[0_10px_30px_-10px_rgba(234,88,12,0.4)]"
-                  >
-                     <ShoppingCart className="w-5 h-5 relative z-10" />
-                     <span className="relative z-10 font-black uppercase tracking-widest text-[10px]">Add to Order</span>
-                  </Button>
-                </div>
               </Card>
             ))}
           </div>
         )}
       </section>
+      
+      {/* Testimonials / Reviews Slider */}
+      {reviews.length > 0 && (
+        <section className="w-full py-24 relative overflow-hidden">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-orange-600/5 blur-[120px] rounded-full -z-10" />
+          
+          <div className="text-center mb-16 px-4">
+            <h2 className="text-3xl sm:text-5xl font-black font-[family-name:var(--font-display)] text-white uppercase tracking-tight mb-4">What Our Foodies Say</h2>
+            <p className="text-slate-400 font-medium max-w-lg mx-auto">Real experiences from our community of gourmet enthusiasts</p>
+          </div>
+
+          <div className="relative max-w-4xl mx-auto px-4 sm:px-12">
+            <button 
+              onClick={prevReview}
+              className="absolute left-0 top-1/2 -translate-y-1/2 w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-orange-600 hover:border-orange-500 transition-all z-10 hidden sm:flex active:scale-90"
+            >
+              <ChevronLeftIcon className="w-6 h-6" />
+            </button>
+
+            <div className="min-h-[300px] flex items-center justify-center">
+              {reviews.map((review, idx) => (
+                <div 
+                  key={review.id}
+                  className={`transition-all duration-700 absolute inset-x-4 sm:inset-x-12 flex flex-col items-center text-center ${idx === currentReviewIndex ? 'opacity-100 scale-100 translate-x-0' : 'opacity-0 scale-90 translate-x-12 pointer-events-none'}`}
+                >
+                  <Quote className="w-12 h-12 text-orange-600/20 mb-8" />
+                  <p className="text-xl sm:text-2xl font-medium text-slate-200 leading-relaxed mb-8 italic">
+                    "{review.comment}"
+                  </p>
+                  
+                  <div className="flex flex-col items-center">
+                    <div className="flex items-center gap-1 mb-3">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className={`w-4 h-4 ${i < review.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-700'}`} />
+                      ))}
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-orange-600 to-amber-500 flex items-center justify-center text-white font-black text-lg mb-3 shadow-xl">
+                      {review.user?.name?.charAt(0).toUpperCase()}
+                    </div>
+                    <h4 className="text-white font-bold tracking-wide">{review.user?.name}</h4>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500/80 mt-1">Reviewed {review.meal?.name}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button 
+              onClick={nextReview}
+              className="absolute right-0 top-1/2 -translate-y-1/2 w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-orange-600 hover:border-orange-500 transition-all z-10 hidden sm:flex active:scale-90"
+            >
+              <ChevronRightIcon className="w-6 h-6" />
+            </button>
+            
+            {/* Dots */}
+            <div className="flex justify-center gap-2 mt-12">
+              {reviews.map((_, i) => (
+                <button 
+                  key={i}
+                  onClick={() => setCurrentReviewIndex(i)}
+                  className={`w-2 h-2 rounded-full transition-all ${i === currentReviewIndex ? 'w-8 bg-orange-600' : 'bg-white/10'}`}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* How it Works */}
       <section className="w-full py-24 mb-12 bg-white/[0.01] rounded-[60px] border border-white/5">

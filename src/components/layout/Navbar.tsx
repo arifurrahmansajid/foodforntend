@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useAuth, useCart } from "@/hooks/use-store";
-import { ShoppingBag, User, LogOut, ChevronDown } from "lucide-react";
+import { ShoppingBag, User, LogOut, ChevronDown, LayoutGrid, Utensils } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../ui";
 import { cn } from "@/lib/utils";
@@ -28,7 +28,12 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-10 text-sm font-semibold tracking-wide text-slate-300">
           <Link href="/meals" className="hover:text-orange-400 transition-colors uppercase">Meals</Link>
           <Link href="/providers" className="hover:text-orange-400 transition-colors uppercase">Providers</Link>
-          {user?.role === 'PROVIDER' && <Link href="/provider/dashboard" className="hover:text-orange-400 transition-colors uppercase">Dashboard</Link>}
+          {user?.role === 'PROVIDER' && (
+            <>
+              <Link href="/provider/dashboard" className="hover:text-orange-400 transition-colors uppercase">Dashboard</Link>
+              <Link href="/provider/menu" className="hover:text-orange-400 transition-colors uppercase">My Menu</Link>
+            </>
+          )}
           {user?.role === 'ADMIN' && <Link href="/admin" className="hover:text-orange-400 transition-colors uppercase">Admin</Link>}
         </div>
 
@@ -76,6 +81,19 @@ export default function Navbar() {
                   <Link href="/orders" className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-sm font-medium text-slate-300">
                     <ShoppingBag className="w-4 h-4 text-slate-500" /> My Orders
                   </Link>
+                  {user?.role === 'PROVIDER' && (
+                    <>
+                      <div className="px-4 py-2 mt-1 border-t border-white/5">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-600">Provider</p>
+                      </div>
+                      <Link href="/provider/dashboard" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-sm font-medium text-orange-400">
+                        <LayoutGrid className="w-4 h-4" /> Dashboard
+                      </Link>
+                      <Link href="/provider/menu" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-sm font-medium text-orange-400">
+                        <Utensils className="w-4 h-4" /> Manage Menu
+                      </Link>
+                    </>
+                  )}
                   <div className="px-2 mt-2 pt-2 border-t border-white/5">
                     <button 
                       onClick={() => { logout(); setIsProfileOpen(false); }}

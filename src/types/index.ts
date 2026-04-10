@@ -35,6 +35,10 @@ export interface Provider {
   description: string;
   image: string;
   rating: number;
+  phone?: string;
+  contactEmail?: string;
+  website?: string;
+  address?: string;
   meals?: Meal[];
 }
 

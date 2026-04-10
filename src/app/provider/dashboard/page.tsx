@@ -35,24 +35,29 @@ export default function ProviderDashboard() {
     const loadDashboard = async () => {
       try {
         setIsLoading(true);
-        // Get provider profile with meals and potential orders
-        const response = await providersApi.getOne(user?.id || '');
-        const provider: Provider = response.data.data.provider;
-        setProviderData(provider);
-
-        // Derive stats from real data
-        const activeOrders = 3; // Mocking for now as we don't have direct provider-order link table yet, but it's backend-aware
-        const mealCount = provider.meals?.length || 0;
+        // Get all provider profiles for this user
+        const response = await providersApi.getMyProfiles();
+        const profiles: Provider[] = response.data.data.profiles;
         
-        setStats([
-          { label: 'Annual Revenue', value: '$0.00', icon: DollarSign, color: 'text-green-500', bg: 'bg-green-500/10', change: '+0%' },
-          { label: 'Live Orders', value: activeOrders.toString(), icon: Package, color: 'text-orange-500', bg: 'bg-orange-500/10', change: '+3' },
-          { label: 'Chef Rating', value: (provider.rating || 0).toFixed(1), icon: Star, color: 'text-amber-500', bg: 'bg-amber-500/10', change: 'NEW' },
-          { label: 'Active Menu', value: mealCount.toString(), icon: Users, color: 'text-indigo-500', bg: 'bg-indigo-500/10', change: 'Items' },
-        ]);
+        if (profiles && profiles.length > 0) {
+          const provider = profiles[0]; // Active context is the first profile for now
+          setProviderData(provider);
+
+          // Derive stats from real data
+          const activeOrders = 3; 
+          const mealCount = provider.meals?.length || 0;
+          
+          setStats([
+            { label: 'Annual Revenue', value: '$0.00', icon: DollarSign, color: 'text-green-500', bg: 'bg-green-500/10', change: '+0%' },
+            { label: 'Live Orders', value: activeOrders.toString(), icon: Package, color: 'text-orange-500', bg: 'bg-orange-500/10', change: '+3' },
+            { label: 'Chef Rating', value: (provider.rating || 0).toFixed(1), icon: Star, color: 'text-amber-500', bg: 'bg-amber-500/10', change: 'NEW' },
+            { label: 'Active Menu', value: mealCount.toString(), icon: Users, color: 'text-indigo-500', bg: 'bg-indigo-500/10', change: 'Items' },
+          ]);
+        } else {
+          setProviderData(null);
+        }
       } catch (error) {
         console.error("Dashboard Sync Failed:", error);
-        toast.error("Failed to sync live data. Using cached view.");
       } finally {
         setIsLoading(false);
       }
@@ -70,6 +75,32 @@ export default function ProviderDashboard() {
     );
   }
 
+  if (!providerData) {
+    return (
+      <div className="flex flex-col space-y-12 animate-in fade-in duration-500 py-6 overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pb-4 border-b border-white/5">
+          <div>
+            <h1 className="text-4xl font-black font-[family-name:var(--font-display)] text-white tracking-widest uppercase">Provider Hub</h1>
+            <p className="text-slate-500 text-xs font-black uppercase tracking-[0.2em] mt-1 opacity-70">
+               Welcome to your new enterprise
+            </p>
+          </div>
+        </div>
+
+        <Card className="p-12 bg-slate-950/40 border-white/5 rounded-[40px] shadow-2xl flex flex-col items-center justify-center text-center">
+            <Utensils className="w-16 h-16 text-orange-500 mb-6" />
+            <h2 className="text-2xl font-black font-[family-name:var(--font-display)] text-white tracking-widest uppercase mb-4">No Profiles Found</h2>
+            <p className="text-slate-400 mb-8 max-w-md">You haven't setup any restaurant profiles yet. Create your first profile to start adding meals to your menu.</p>
+            <Link href="/provider/menu">
+              <Button className="h-14 px-8 rounded-2xl font-black uppercase tracking-widest flex items-center gap-2 shadow-[0_15px_30px_-5px_rgba(234,88,12,0.4)]">
+                  <Plus className="w-5 h-5" /> Setup First Profile
+              </Button>
+            </Link>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col space-y-12 animate-in fade-in duration-500 py-6 overflow-hidden">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pb-4 border-b border-white/5">
@@ -83,7 +114,7 @@ export default function ProviderDashboard() {
         <div className="flex gap-3">
           <Link href="/provider/menu">
             <Button className="h-14 px-8 rounded-2xl font-black uppercase tracking-widest flex items-center gap-2 shadow-[0_15px_30px_-5px_rgba(234,88,12,0.4)] transition-all active:scale-95">
-                <Plus className="w-5 h-5" /> Add New Meal
+                <Plus className="w-5 h-5" /> Add New Profile or Meal
             </Button>
           </Link>
           <Button variant="outline" className="w-14 h-14 p-0 rounded-2xl border-white/5 bg-white/5 hover:bg-white/10 transition-all flex items-center justify-center">

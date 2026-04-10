@@ -27,6 +27,10 @@ export const mealsApi = {
   remove: (id: string) => api.delete(`/provider/meals/${id}`),
 };
 
+export const categoriesApi = {
+  getAll: () => api.get('/categories'),
+};
+
 export const ordersApi = {
   create: (data: any) => api.post('/orders', data),
   getUserOrders: () => api.get('/orders'),
@@ -36,6 +40,9 @@ export const ordersApi = {
 export const providersApi = {
   getAll: (params?: any) => api.get('/providers', { params }),
   getOne: (id: string) => api.get(`/providers/${id}`),
+  // Provider Profiles for Provider Context
+  getMyProfiles: () => api.get('/provider/profiles'),
+  createProfile: (data: any) => api.post('/provider/profiles', data),
   // Admin Management
   getAdminAll: () => api.get('/admin/providers'),
 };
@@ -54,6 +61,11 @@ export const adminApi = {
   // Service Management
   getMeals: () => api.get('/admin/meals'),
   getProviders: () => api.get('/admin/providers'),
+};
+
+export const reviewsApi = {
+  getAll: () => api.get('/reviews'),
+  create: (mealId: string, data: { rating: number; comment: string }) => api.post(`/meals/${mealId}/reviews`, data),
 };
 
 export default api;
