@@ -33,7 +33,10 @@ export default function RootLayout({
       className={`${inter.variable} ${outfit.variable} dark antialiased`}
       suppressHydrationWarning
     >
-      <body className="flex flex-col relative w-full h-full min-h-screen bg-[#020617] text-[#f8fafc] font-sans">
+      <body 
+        className="flex flex-col relative w-full h-full min-h-screen bg-[#020617] text-[#f8fafc] font-sans"
+        suppressHydrationWarning
+      >
         <Toaster position="bottom-right" />
         
         {/* Deep ambient backgrounds */}
