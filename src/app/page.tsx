@@ -36,7 +36,12 @@ export default function Home() {
           reviewsApi.getAll()
         ]);
         
-        setFeaturedMeals(mealsRes.data.data.meals.slice(0, 3) || []);
+        const allMeals = mealsRes.data.data.meals || [];
+        const filteredFeatured = allMeals.filter((m: any) => 
+          !["SYSTEM ADMIN", "SELLER"].includes(m.provider?.name?.toUpperCase())
+        );
+        
+        setFeaturedMeals(filteredFeatured.slice(0, 3));
         setReviews(reviewsRes.data.data.reviews || []);
       } catch (error) {
         console.error("Home Feed Error:", error);

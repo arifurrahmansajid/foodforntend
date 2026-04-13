@@ -56,10 +56,13 @@ export default function ProvidersPage() {
     fetchProviders();
   }, []);
 
-  const filteredProviders = providers.filter(provider => 
-    provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (provider.description && provider.description.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredProviders = providers.filter(provider => {
+    const isExcluded = ["SYSTEM ADMIN", "SELLER"].includes(provider.name.toUpperCase());
+    if (isExcluded) return false;
+
+    return provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (provider.description && provider.description.toLowerCase().includes(searchTerm.toLowerCase()));
+  });
 
   return (
     <div className="flex flex-col space-y-12 animate-in fade-in duration-700 pb-24">
