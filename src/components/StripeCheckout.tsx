@@ -11,6 +11,7 @@ import {
 import { paymentApi } from "@/lib/api";
 import { Button } from "@/components/ui";
 import { Loader2, CreditCard } from "lucide-react";
+import { useAuth } from "@/hooks/use-store";
 import toast from "react-hot-toast";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "pk_test_51Sh4eGCM2zsGi72txKML17VT1mnuFT1XafUMhKpFAfFrK79CjC8JWFFaIFBq9cS6yDWKzyrcU6Ap7I1R5CMPFWqu00jWmmZKct");
@@ -26,11 +27,18 @@ interface CheckoutFormProps {
 function CheckoutForm({ amount, onSuccess, isProcessing, setIsProcessing, address }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
+  const { token } = useAuth();
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     if (!stripe || !elements) return;
+    
+    if (!token) {
+      toast.error("Please login to proceed with payment.");
+      return;
+    }
+
     if (!address.trim()) {
       toast.error("Please provide a delivery address first.");
       return;
@@ -60,9 +68,10 @@ function CheckoutForm({ amount, onSuccess, isProcessing, setIsProcessing, addres
           onSuccess();
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Stripe error:", error);
-      toast.error("Payment initialization failed. Please try again.");
+      const errorMessage = error.response?.data?.message || error.message || "Payment initialization failed. Please try again.";
+      toast.error(errorMessage);
     } finally {
       setIsProcessing(false);
     }

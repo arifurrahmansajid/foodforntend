@@ -94,12 +94,12 @@ export default function OrdersPage() {
                 
                 {/* Status Icon */}
                 <div className={`w-20 h-20 rounded-[30px] flex items-center justify-center shrink-0 shadow-2xl ${
-                  order.status === 'COMPLETED' ? 'bg-green-500/10 text-green-500 border border-green-500/20' :
+                  order.status === 'DELIVERED' ? 'bg-green-500/10 text-green-500 border border-green-500/20' :
                   order.status === 'CANCELLED' ? 'bg-red-500/10 text-red-500 border border-red-500/20' :
                   'bg-orange-600/10 text-orange-500 border border-orange-500/20'
                 }`}>
-                  {order.status === 'COMPLETED' ? <CheckCircle className="w-10 h-10" /> :
-                   order.status === 'DELIVERING' ? <Truck className="w-10 h-10" /> :
+                  {order.status === 'DELIVERED' ? <CheckCircle className="w-10 h-10" /> :
+                   order.status === 'READY' ? <Truck className="w-10 h-10" /> :
                    order.status === 'PREPARING' ? <Clock className="w-10 h-10" /> :
                    <Package className="w-10 h-10" />}
                 </div>
@@ -116,11 +116,11 @@ export default function OrdersPage() {
                 {/* Price & Status Badge */}
                 <div className="flex flex-col items-center md:items-end gap-3">
                   <span className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                    order.status === 'COMPLETED' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                    order.status === 'DELIVERED' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
                     order.status === 'CANCELLED' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
                     'bg-orange-600/10 text-orange-500 border-orange-500/20'
                   }`}>
-                    {order.status}
+                    {order.status === 'PLACED' ? 'PENDING' : order.status}
                   </span>
                   <p className="text-3xl font-black font-[family-name:var(--font-display)] text-white tracking-tighter">${order.total.toFixed(2)}</p>
                 </div>

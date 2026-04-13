@@ -62,7 +62,7 @@ export interface OrderItem {
 export interface Order {
   id: string;
   userId: string;
-  status: 'PENDING' | 'PREPARING' | 'DELIVERING' | 'COMPLETED' | 'CANCELLED';
+  status: 'PLACED' | 'PREPARING' | 'READY' | 'DELIVERED' | 'CANCELLED';
   total: number;
   items: OrderItem[];
   createdAt: string;

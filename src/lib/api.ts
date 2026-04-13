@@ -6,7 +6,22 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = useAuth.getState().token;
+  // Try Zustand store first, then fall back to localStorage directly
+  // This handles the case where Zustand's persist middleware hasn't hydrated yet
+  let token = useAuth.getState().token;
+  
+  if (!token) {
+    try {
+      const stored = localStorage.getItem('foodhub-auth');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        token = parsed?.state?.token || null;
+      }
+    } catch (e) {
+      // localStorage not available (SSR)
+    }
+  }
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -16,6 +31,7 @@ api.interceptors.request.use((config) => {
 export const authApi = {
   login: (data: any) => api.post('/auth/login', data),
   register: (data: any) => api.post('/auth/register', data),
+  updateProfile: (data: any) => api.patch('/auth/update-profile', data),
 };
 
 export const mealsApi = {
@@ -35,6 +51,7 @@ export const ordersApi = {
   create: (data: any) => api.post('/orders', data),
   getUserOrders: () => api.get('/orders'),
   getOne: (id: string) => api.get(`/orders/${id}`),
+  cancel: (id: string) => api.patch(`/orders/${id}/cancel`),
 };
 
 export const providersApi = {

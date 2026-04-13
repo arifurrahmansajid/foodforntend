@@ -62,8 +62,17 @@ export default function Navbar() {
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
                 className="flex items-center gap-2 p-1.5 max-sm:p-1 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all duration-300 group"
               >
-                <div className="w-8 h-8 max-sm:w-7 max-sm:h-7 rounded-xl bg-orange-600/20 flex items-center justify-center border border-orange-500/20">
-                  <User className="w-5 h-5 max-sm:w-4 max-sm:h-4 text-orange-400" />
+                <div className="w-8 h-8 max-sm:w-7 max-sm:h-7 rounded-xl bg-orange-600/20 flex items-center justify-center border border-orange-500/20 overflow-hidden">
+                  {user.avatar ? (
+                    <img 
+                      src={user.avatar} 
+                      className="w-full h-full object-cover" 
+                      alt="Profile" 
+                      onError={(e) => (e.currentTarget.style.display = 'none')}
+                    />
+                  ) : (
+                    <User className="w-5 h-5 max-sm:w-4 max-sm:h-4 text-orange-400" />
+                  )}
                 </div>
                 <span className="hidden sm:inline font-bold text-sm text-slate-200">{user.name.split(' ')[0]}</span>
                 <ChevronDown className={cn("w-4 h-4 text-slate-400 transition-transform duration-300", isProfileOpen ? "rotate-180" : "")} />
