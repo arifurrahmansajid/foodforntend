@@ -4,20 +4,22 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCart, useAuth } from "@/hooks/use-store";
 import { ordersApi } from "@/lib/api";
-import { Button, Input, Card } from "@/components/ui";
-import { 
-  ShoppingBag, MapPin, CreditCard, CheckCircle, 
+import { Button, Card } from "@/components/ui";
+import {
+  ShoppingBag, MapPin, CreditCard, CheckCircle,
   ArrowLeft, Loader2, ShieldCheck, Truck, Clock
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import StripeCheckout from "@/components/StripeCheckout";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, clearCart } = useCart();
   const { user } = useAuth();
-  
+
   const [address, setAddress] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "stripe">("cod");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -35,28 +37,17 @@ export default function CheckoutPage() {
   const deliveryFee = subtotal > 0 ? 5.99 : 0;
   const total = subtotal + deliveryFee;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) {
-      toast.error("Please login to complete your order.");
-      router.push("/login?redirect=/checkout");
-      return;
-    }
-
-    if (!address.trim()) {
-      toast.error("Please provide a delivery address.");
-      return;
-    }
-
+  const handleOrderSuccess = async () => {
     try {
       setIsSubmitting(true);
       const orderData = {
         items: items.map(item => ({ mealId: item.mealId, quantity: item.quantity })),
-        address
+        address,
+        paymentMethod
       };
-      
+
       await ordersApi.create(orderData);
-      
+
       setIsSuccess(true);
       clearCart();
       toast.success("Order placed successfully!", {
@@ -68,6 +59,24 @@ export default function CheckoutPage() {
       toast.error("Failed to place order. Please try again.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!user) {
+      toast.error("Please login to complete your order.");
+      router.push("/login?redirect=/checkout");
+      return;
+    }
+
+    if (!address.trim()) {
+      toast.error("Please provide a delivery address.");
+      return;
+    }
+
+    if (paymentMethod === "cod") {
+      await handleOrderSuccess();
     }
   };
 
@@ -126,7 +135,7 @@ export default function CheckoutPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
         {/* Left: Form */}
         <div className="lg:col-span-7 space-y-10">
-          <form onSubmit={handleSubmit} className="space-y-10">
+          <div className="space-y-10">
             {/* Delivery Details */}
             <section className="space-y-6 animate-in slide-in-from-left duration-700 delay-100">
               <div className="flex items-center gap-4 text-white">
@@ -136,7 +145,7 @@ export default function CheckoutPage() {
                 <h2 className="text-xl font-black uppercase tracking-widest">Delivery Destination</h2>
               </div>
               <div className="space-y-4">
-                <textarea 
+                <textarea
                   required
                   placeholder="Street Address, Apartment, City, Postal Code"
                   className="w-full h-32 rounded-3xl bg-white/[0.02] border border-white/5 p-6 text-white font-medium placeholder:text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all resize-none shadow-inner"
@@ -165,51 +174,76 @@ export default function CheckoutPage() {
                 <h2 className="text-xl font-black uppercase tracking-widest">Payment Method</h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-6 rounded-[32px] border-2 border-orange-500 bg-orange-500/5 flex items-center justify-between group cursor-pointer">
+                <div
+                  onClick={() => setPaymentMethod("cod")}
+                  className={`p-6 rounded-[32px] border-2 transition-all cursor-pointer flex items-center justify-between group ${paymentMethod === "cod" ? "border-orange-500 bg-orange-500/5" : "border-white/5 bg-white/[0.02] hover:border-white/10"
+                    }`}
+                >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-orange-500 flex items-center justify-center text-white">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${paymentMethod === "cod" ? "bg-orange-500 text-white" : "bg-white/5 text-slate-500"
+                      }`}>
                       <ShoppingBag className="w-6 h-6" />
                     </div>
                     <div>
-                      <p className="text-xs font-black text-white uppercase tracking-widest">Cash on Delivery</p>
-                      <p className="text-[10px] text-orange-200/60 font-medium">Verify upon receipt</p>
+                      <p className={`text-xs font-black uppercase tracking-widest ${paymentMethod === "cod" ? "text-white" : "text-slate-400"}`}>Cash on Delivery</p>
+                      <p className="text-[10px] text-slate-600 font-medium">Verify upon receipt</p>
                     </div>
                   </div>
-                  <div className="w-6 h-6 rounded-full border-2 border-orange-500 flex items-center justify-center">
-                    <div className="w-3 h-3 rounded-full bg-orange-500" />
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === "cod" ? "border-orange-500" : "border-white/10"
+                    }`}>
+                    {paymentMethod === "cod" && <div className="w-3 h-3 rounded-full bg-orange-500" />}
                   </div>
                 </div>
-                
-                <div className="p-6 rounded-[32px] border border-white/5 bg-white/[0.02] flex items-center justify-between opacity-50 cursor-not-allowed">
+
+                <div
+                  onClick={() => setPaymentMethod("stripe")}
+                  className={`p-6 rounded-[32px] border-2 transition-all cursor-pointer flex items-center justify-between group ${paymentMethod === "stripe" ? "border-orange-500 bg-orange-500/5" : "border-white/5 bg-white/[0.02] hover:border-white/10"
+                    }`}
+                >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-slate-500">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${paymentMethod === "stripe" ? "bg-orange-500 text-white" : "bg-white/5 text-slate-500"
+                      }`}>
                       <CreditCard className="w-6 h-6" />
                     </div>
                     <div>
-                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Credit Card</p>
-                      <p className="text-[10px] text-slate-600 font-medium italic">Available soon</p>
+                      <p className={`text-xs font-black uppercase tracking-widest ${paymentMethod === "stripe" ? "text-white" : "text-slate-400"}`}>Credit Card</p>
+                      <p className="text-[10px] text-slate-600 font-medium">Secure via Stripe</p>
                     </div>
+                  </div>
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === "stripe" ? "border-orange-500" : "border-white/10"
+                    }`}>
+                    {paymentMethod === "stripe" && <div className="w-3 h-3 rounded-full bg-orange-500" />}
                   </div>
                 </div>
               </div>
             </section>
 
             <div className="pt-6 animate-in slide-in-from-bottom duration-700 delay-300">
-               <Button 
-                disabled={isSubmitting}
-                className="w-full h-16 rounded-[28px] bg-orange-600 hover:bg-orange-500 text-white text-base font-black uppercase tracking-[0.2em] shadow-[0_20px_50px_-10px_rgba(234,88,12,0.6)] group relative overflow-hidden"
-               >
-                 {isSubmitting ? (
-                   <Loader2 className="w-6 h-6 animate-spin" />
-                 ) : (
-                   <span className="flex items-center justify-center gap-4">
-                     Confirm Order <ArrowLeft className="w-5 h-5 rotate-180" />
-                   </span>
-                 )}
-               </Button>
-               <p className="text-[9px] text-center text-slate-600 uppercase font-bold tracking-widest mt-4">By placing your order, you agree to our terms of elite service.</p>
+              {paymentMethod === "cod" ? (
+                <Button
+                  type="button"
+                  onClick={() => handleSubmit()}
+                  disabled={isSubmitting}
+                  className="w-full h-16 rounded-[28px] bg-orange-600 hover:bg-orange-500 text-white text-base font-black uppercase tracking-[0.2em] shadow-[0_20px_50px_-10px_rgba(234,88,12,0.6)] group relative overflow-hidden"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  ) : (
+                    <span className="flex items-center justify-center gap-4">
+                      Confirm Order <ArrowLeft className="w-5 h-5 rotate-180" />
+                    </span>
+                  )}
+                </Button>
+              ) : (
+                <StripeCheckout
+                  amount={total}
+                  address={address}
+                  onSuccess={handleOrderSuccess}
+                />
+              )}
+              <p className="text-[9px] text-center text-slate-600 uppercase font-bold tracking-widest mt-4">By placing your order, you agree to our terms of elite service.</p>
             </div>
-          </form>
+          </div>
         </div>
 
         {/* Right: Summary Panel */}
@@ -217,9 +251,9 @@ export default function CheckoutPage() {
           <Card className="p-8 md:p-10 bg-[#020617] border-white/5 rounded-[48px] sticky top-32 space-y-8 shadow-2xl overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 blur-[80px]" />
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-orange-500/5 blur-[80px]" />
-            
+
             <h3 className="text-2xl font-black font-[family-name:var(--font-display)] text-white uppercase tracking-tight">Order Receipt</h3>
-            
+
             <div className="space-y-6 max-h-[40vh] overflow-y-auto pr-2 scrollbar-hide">
               {items.map((item) => (
                 <div key={item.id} className="flex justify-between items-center group/item">

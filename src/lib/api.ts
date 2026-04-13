@@ -43,6 +43,9 @@ export const providersApi = {
   // Provider Profiles for Provider Context
   getMyProfiles: () => api.get('/provider/profiles'),
   createProfile: (data: any) => api.post('/provider/profiles', data),
+  // Provider Orders
+  getOrders: () => api.get('/provider/orders'),
+  updateOrderStatus: (id: string, status: string) => api.patch(`/provider/orders/${id}`, { status }),
   // Admin Management
   getAdminAll: () => api.get('/admin/providers'),
 };
@@ -51,13 +54,13 @@ export const adminApi = {
   getStats: () => api.get('/admin/stats'),
   getUsers: () => api.get('/admin/users'),
   updateUserStatus: (id: string, isActive: boolean) => api.patch(`/admin/users/${id}`, { isActive }),
-  
+
   // Categories
   getCategories: () => api.get('/admin/categories'),
   createCategory: (data: any) => api.post('/admin/categories', data),
   updateCategory: (id: string, data: any) => api.patch(`/admin/categories/${id}`, data),
   deleteCategory: (id: string) => api.delete(`/admin/categories/${id}`),
-  
+
   // Service Management
   getMeals: () => api.get('/admin/meals'),
   getProviders: () => api.get('/admin/providers'),
@@ -66,6 +69,10 @@ export const adminApi = {
 export const reviewsApi = {
   getAll: () => api.get('/reviews'),
   create: (mealId: string, data: { rating: number; comment: string }) => api.post(`/meals/${mealId}/reviews`, data),
+};
+
+export const paymentApi = {
+  createPaymentIntent: (amount: number) => api.post('/payment/create-payment-intent', { amount }),
 };
 
 export default api;

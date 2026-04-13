@@ -28,6 +28,12 @@ export interface Meal {
   rating?: number;
   avgRating?: number;
   reviews?: any[];
+  cuisine?: string;
+  dietary?: string[];
+  mealType?: string;
+  spiceLevel?: 'Low' | 'Medium' | 'High';
+  calories?: number;
+  prepTime?: number;
 }
 
 export interface Provider {
