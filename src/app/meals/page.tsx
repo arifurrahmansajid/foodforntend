@@ -20,12 +20,11 @@ import {
 import Link from "next/link";
 import { useCart } from "@/hooks/use-store";
 import toast from "react-hot-toast";
-import { mealsApi } from "@/lib/api";
-import { Meal } from "@/types";
+import { mealsApi, categoriesApi } from "@/lib/api";
+import { Meal, Category } from "@/types";
 
-const CUISINES = ["All", "Voluptas dolore nisi", "Saepe officia tempor", "Quia aperiam illo pa", "International", "Ea nihil quidem recu", "Alias magna adipisic"];
-const DIETARY = ["Neque Sed Proident", "Delectus Exercitati", "Nulla Doloremque Aut", "Vegan", "Gluten-Free", "Quibusdam Accusantiu", "Quisquam Incidunt"];
-const MEAL_TYPES = ["All", "Nisi labore incidunt", "Suscipit sapiente as", "Dolorem delectus ri", "Diner", "Asperiores et in seq", "Fugiat distinctio"];
+const DIETARY_DEFAULTS = ["Healthy", "Vegetarian", "Vegan", "Gluten-Free", "High Protein"];
+const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner", "Snack", "Beverage"];
 const SPICE_LEVELS = ["All", "Low", "Medium", "High"];
 const SORT_BY = ["Newest First", "Price", "Name", "Calories"];
 const SORT_ORDER = ["Descending", "Ascending"];
@@ -33,6 +32,7 @@ const SORT_ORDER = ["Descending", "Ascending"];
 export default function MealsPage() {
   // --- States ---
   const [meals, setMeals] = useState<Meal[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { addItem } = useCart();
 
@@ -51,75 +51,44 @@ export default function MealsPage() {
   const itemsPerPage = 6;
 
   useEffect(() => {
-    const fetchMeals = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
-        const response = await mealsApi.getAll();
-        const baseMeals = response.data.data.meals || [];
+        const [mealsRes, catsRes] = await Promise.all([
+            mealsApi.getAll(),
+            categoriesApi.getAll()
+        ]);
+
+        const baseMeals = mealsRes.data.data.meals || [];
+        const baseCats = catsRes.data.data.categories || [];
         
-        // Enhance meals with mock data for missing fields to match design
-        const enhancedMeals = baseMeals.map((meal: any, index: number) => ({
+        setCategories(baseCats);
+        
+        // Enhance meals with data from backend categories and some smart defaults
+        const enhancedMeals = baseMeals.map((meal: any) => ({
           ...meal,
-          cuisine: meal.cuisine || CUISINES[index % (CUISINES.length - 1) + 1],
-          dietary: meal.dietary || [DIETARY[index % DIETARY.length], DIETARY[(index + 2) % DIETARY.length]],
-          mealType: meal.mealType || MEAL_TYPES[index % (MEAL_TYPES.length - 1) + 1],
-          spiceLevel: meal.spiceLevel || (index % 3 === 0 ? "High" : index % 3 === 1 ? "Medium" : "Low"),
-          calories: meal.calories || Math.floor(Math.random() * 500) + 100,
-          prepTime: meal.prepTime || Math.floor(Math.random() * 45) + 15,
-          badge: ['A', 'E', 'V', 'S', 'Q', 'I'][index % 6]
+          cuisine: meal.category?.name || "International",
+          dietary: meal.dietary || (meal.category?.name === "Healthy" ? ["Healthy"] : []),
+          mealType: meal.mealType || (meal.price > 10 ? "Dinner" : "Lunch"),
+          spiceLevel: meal.spiceLevel || "Medium",
+          calories: meal.calories || Math.floor(Math.random() * 400) + 100,
+          prepTime: meal.prepTime || 25,
+          badge: meal.category?.name ? meal.category.name[0].toUpperCase() : "M"
         }));
         
         setMeals(enhancedMeals);
       } catch (error) {
-        console.error("Failed to fetch meals:", error);
-        
-        // Fallback for demo with full fields
-        const demoMeals: Meal[] = [
-          { 
-            id: '1', name: "Pakistani Kabab", price: 219.0, description: "Commodo sint volupt", 
-            cuisine: "Voluptas dolore nisi", dietary: ["Quisquam Incidunt"], mealType: "All", 
-            spiceLevel: "High", calories: 6, prepTime: 30, image: "", 
-            badge: 'A', provider: { name: "Gourmet Kitchen" } as any 
-          } as any,
-          { 
-            id: '2', name: "New Cakes", price: 891.0, description: "This cakes are very interesting so try it", 
-            cuisine: "Saepe officia tempor", dietary: ["Quibusdam Accusantiu"], mealType: "Nisi labore incidunt", 
-            spiceLevel: "Medium", calories: 18, prepTime: 45, image: "", 
-            badge: 'E', provider: { name: "Bakery Delight" } as any 
-          } as any,
-          { 
-            id: '3', name: "Matton Biriyani", price: 747.0, description: "Non veniam labore n", 
-            cuisine: "Quia aperiam illo pa", dietary: ["Neque Sed Proident"], mealType: "Suscipit sapiente as", 
-            spiceLevel: "High", calories: 33, prepTime: 60, image: "", 
-            badge: 'V', provider: { name: "Royal Spice" } as any 
-          } as any,
-          { 
-            id: '4', name: "Hot Coffie", price: 465.0, description: "Blanditils nisi vel", 
-            cuisine: "International", dietary: ["Delectus Exercitati"], mealType: "Dolorem delectus ri", 
-            spiceLevel: "High", calories: 68, prepTime: 10, image: "", 
-            badge: 'S', provider: { name: "Cafe Hub" } as any 
-          } as any,
-          { 
-            id: '5', name: "Donald Tramp Pizza", price: 242.0, description: "Eiusmod dignissimos", 
-            cuisine: "Ea nihil quidem recu", dietary: ["Nulla Doloremque Aut"], mealType: "Diner", 
-            spiceLevel: "Low", calories: 24, prepTime: 25, image: "", 
-            badge: 'Q', provider: { name: "Fast Food" } as any 
-          } as any,
-          { 
-            id: '6', name: "Basmati Kacchi", price: 200.0, description: "Old Dhaka style beef tehari", 
-            cuisine: "Alias magna adipisic", dietary: ["Vegan", "Gluten-Free"], mealType: "Asperiores et in seq", 
-            spiceLevel: "High", calories: 250, prepTime: 50, image: "", 
-            badge: 'I', provider: { name: "Heritage Food" } as any 
-          } as any,
-        ];
-        setMeals(demoMeals);
+        console.error("Failed to fetch page data:", error);
+        toast.error("Connecting to kitchen...");
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchMeals();
+    fetchData();
   }, []);
+
+  const cuisines = useMemo(() => ["All", ...categories.map(c => c.name)], [categories]);
 
   // --- Filtering Logic ---
   const filteredMeals = useMemo(() => {
@@ -233,7 +202,7 @@ export default function MealsPage() {
             <div className="mb-8">
               <h3 className="text-white font-bold mb-4 flex items-center justify-between">Cuisine</h3>
               <div className="space-y-3">
-                {CUISINES.map(cuisine => (
+                {cuisines.map(cuisine => (
                   <label key={cuisine} className="flex items-center gap-3 group cursor-pointer">
                     <div 
                       onClick={() => setSelectedCuisine(cuisine)}
@@ -255,7 +224,7 @@ export default function MealsPage() {
             <div className="mb-8">
               <h3 className="text-white font-bold mb-4">Dietary</h3>
               <div className="space-y-3">
-                {DIETARY.map(diet => (
+                {DIETARY_DEFAULTS.map(diet => (
                   <label key={diet} className="flex items-center gap-3 group cursor-pointer">
                     <div 
                       onClick={() => toggleDietary(diet)}
