@@ -132,7 +132,7 @@ export default function CheckoutPage() {
                   "The provider will accept and start preparing your meal shortly",
                   "You'll receive updates as your order moves through each stage"
                 ].map((text, i) => (
-                  <li key={i} className="flex gap-3 items-start animate-in slide-in-from-left duration-500" style={{ delay: `${i * 100}ms` }}>
+                  <li key={i} className="flex gap-3 items-start animate-in slide-in-from-left duration-500" style={{ animationDelay: `${i * 100}ms` }}>
                     <div className="mt-1 shrink-0 text-green-500">
                       <CheckCircle className="w-4 h-4" />
                     </div>
