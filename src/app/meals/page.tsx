@@ -94,7 +94,7 @@ export default function MealsPage() {
   const filteredMeals = useMemo(() => {
     // Search
     let result = meals.filter(m => 
-        !["SYSTEM ADMIN", "SELLER"].includes(m.provider?.name?.toUpperCase())
+        !["SYSTEM ADMIN", "SELLER"].includes(m.provider?.name?.toUpperCase() || '')
     );
 
     // Search
