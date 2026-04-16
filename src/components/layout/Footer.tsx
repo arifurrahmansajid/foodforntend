@@ -4,7 +4,7 @@ import { Facebook, Twitter, Instagram, Mail, Phone, MapPin } from "lucide-react"
 export default function Footer() {
   return (
     <footer className="w-full bg-[#020617] border-t border-white/5 pt-16 pb-8 text-slate-400 relative z-10 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
         <div className="col-span-1 md:col-span-1">
           <Link href="/" className="flex items-center gap-2 mb-6 group">
             <div className="w-9 h-9 rounded-lg bg-orange-600 flex items-center justify-center text-white font-bold text-lg group-hover:scale-110 transition-all">
@@ -54,7 +54,7 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 border-t border-white/5 text-center sm:flex justify-between items-center text-xs font-semibold uppercase tracking-widest opacity-40">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 border-t border-white/5 text-center sm:flex justify-between items-center text-xs font-semibold uppercase tracking-widest opacity-40">
         <p>FoodHub &copy; {new Date().getFullYear()} All Rights Reserved</p>
         <p className="mt-2 sm:mt-0">Designed for Food Lovers</p>
       </div>
