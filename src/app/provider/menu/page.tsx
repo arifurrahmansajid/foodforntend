@@ -230,9 +230,18 @@ export default function ProviderMenu() {
       toast.error("Select a restaurant profile first.");
       return;
     }
+    const numericPrice = parseFloat(price);
+    if (isNaN(numericPrice) || numericPrice <= 0) {
+      toast.error("Please enter a valid price greater than 0.");
+      return;
+    }
+
     try {
       await mealsApi.add({
-        name, price: parseFloat(price), description, image,
+        name, 
+        price: numericPrice, 
+        description, 
+        image,
         categoryId: categoryId || undefined,
         providerId: selectedProfileId,
       });
@@ -412,7 +421,16 @@ export default function ProviderMenu() {
               </div>
               <div className="space-y-2 group/field">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-600 group-focus-within/field:text-orange-500 transition-colors ml-1">Price ($) *</label>
-                <Input required value={price} onChange={(e) => setPrice(e.target.value)} placeholder="e.g. 24.99" className="h-14 rounded-2xl bg-white/[0.03] border-white/5 font-bold text-slate-100 placeholder:text-slate-800" />
+                <Input 
+                  required 
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={price} 
+                  onChange={(e) => setPrice(e.target.value)} 
+                  placeholder="e.g. 24.99" 
+                  className="h-14 rounded-2xl bg-white/[0.03] border-white/5 font-bold text-slate-100 placeholder:text-slate-800" 
+                />
               </div>
               <div className="space-y-2 group/field relative">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-600 group-focus-within/field:text-orange-500 transition-colors ml-1">Category</label>
