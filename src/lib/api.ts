@@ -9,7 +9,7 @@ api.interceptors.request.use((config) => {
   // Try Zustand store first, then fall back to localStorage directly
   // This handles the case where Zustand's persist middleware hasn't hydrated yet
   let token = useAuth.getState().token;
-  
+
   if (!token) {
     try {
       const stored = localStorage.getItem('foodhub-auth');
@@ -27,6 +27,25 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error("[API ERROR]", error.response?.status, error.response?.data?.message || error.message);
+
+    // Automatically wipe session on 401 Unauthorized
+    if (error.response?.status === 401) {
+      console.warn("Session invalid/expired. Forcing logout.");
+      useAuth.getState().logout();
+      localStorage.removeItem('foodhub-auth');
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export const authApi = {
   login: (data: any) => api.post('/auth/login', data),
@@ -58,10 +77,10 @@ export const providersApi = {
   getAll: (params?: any) => api.get('/providers', { params }),
   getOne: (id: string) => api.get(`/providers/${id}`),
   // Provider Profiles for Provider Context
-  getMyProfiles: () => api.get('/provider/profiles'),
+  getMyProfiles: () => api.get(`/provider/profiles?_t=${Date.now()}`),
   createProfile: (data: any) => api.post('/provider/profiles', data),
   // Provider Orders
-  getOrders: () => api.get('/provider/orders'),
+  getOrders: () => api.get(`/provider/orders?_t=${Date.now()}`),
   updateOrderStatus: (id: string, status: string) => api.patch(`/provider/orders/${id}`, { status }),
   // Admin Management
   getAdminAll: () => api.get('/admin/providers'),

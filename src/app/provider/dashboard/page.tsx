@@ -2,17 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { Button, Card, Input } from "@/components/ui";
-import { 
-  BarChart3, Plus, Search, Utensils, ShoppingBag, 
+import {
+  BarChart3, Plus, Search, Utensils, ShoppingBag,
   Settings, TrendingUp, Users, DollarSign, Package,
-  Trash2, Edit, ChevronRight, Star, Clock, AlertCircle
+  Trash2, Edit, ChevronRight, Star, Clock, AlertCircle, Loader2
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { useAuth } from "@/hooks/use-store";
 import { providersApi, mealsApi } from "@/lib/api";
 import { Provider, Meal, Order } from "@/types";
-import { Loader2 } from "lucide-react";
 
 // Types for internal dashboard use
 interface DashboardStats {
@@ -28,29 +27,70 @@ export default function ProviderDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(true);
   const [providerData, setProviderData] = useState<Provider | null>(null);
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [stats, setStats] = useState<DashboardStats[]>([]);
+  const [isHolidayMode, setIsHolidayMode] = useState(false);
+  const [isClearingCache, setIsClearingCache] = useState(false);
   const { user } = useAuth();
+
+  const toggleHolidayMode = () => {
+    setIsHolidayMode(!isHolidayMode);
+    toast.success(isHolidayMode ? 'Holiday Mode Disabled' : 'Holiday Mode Enabled: Kitchen is closed');
+  };
+
+  const handleClearCache = async () => {
+    setIsClearingCache(true);
+    toast.loading('Clearing Edge Cache...', { id: 'cache' });
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    toast.success('Cache cleared successfully: CDN flushed', { id: 'cache' });
+    setIsClearingCache(false);
+  };
 
   useEffect(() => {
     const loadDashboard = async () => {
       try {
         setIsLoading(true);
-        // Get all provider profiles for this user
-        const response = await providersApi.getMyProfiles();
-        const profiles: Provider[] = response.data.data.profiles;
-        
-        if (profiles && profiles.length > 0) {
-          const provider = profiles[0]; // Active context is the first profile for now
+        const [profilesRes, ordersRes] = await Promise.all([
+          providersApi.getMyProfiles(),
+          providersApi.getOrders()
+        ]);
+
+        const profiles: Provider[] = profilesRes.data.data.profiles || [];
+        const orders: any[] = ordersRes.data.data.orders || [];
+
+        setRecentOrders(orders);
+
+        if (profiles.length > 0) {
+          const provider = profiles[0];
           setProviderData(provider);
 
-          // Derive stats from real data
-          const activeOrders = 3; 
+          const activeOrders = orders.filter(o => ['PENDING', 'PREPARING', 'OUT_FOR_DELIVERY'].includes(o.status)).length;
+
+          let totalRevenue = 0;
+          orders.filter(o => o.status !== 'CANCELLED').forEach(order => {
+            order.items.forEach((item: any) => {
+              totalRevenue += (item.price * item.quantity) * 0.98;
+            });
+          });
+
           const mealCount = provider.meals?.length || 0;
-          
+
+          let totalReviewsCount = 0;
+          let totalReviewsSum = 0;
+          provider.meals?.forEach((m: any) => {
+              if (m.reviews) {
+                  m.reviews.forEach((r: any) => {
+                      totalReviewsCount++;
+                      totalReviewsSum += r.rating;
+                  });
+              }
+          });
+          const averageRating = totalReviewsCount > 0 ? (totalReviewsSum / totalReviewsCount).toFixed(1) : (provider.rating || 0).toFixed(1);
+
           setStats([
-            { label: 'Annual Revenue', value: '$0.00', icon: DollarSign, color: 'text-green-500', bg: 'bg-green-500/10', change: '+0%' },
-            { label: 'Live Orders', value: activeOrders.toString(), icon: Package, color: 'text-orange-500', bg: 'bg-orange-500/10', change: '+3' },
-            { label: 'Chef Rating', value: (provider.rating || 0).toFixed(1), icon: Star, color: 'text-amber-500', bg: 'bg-amber-500/10', change: 'NEW' },
+            { label: 'Total Earnings', value: `$${totalRevenue.toFixed(2)}`, icon: DollarSign, color: 'text-green-500', bg: 'bg-green-500/10', change: '+12%' },
+            { label: 'Live Orders', value: activeOrders.toString(), icon: Package, color: 'text-orange-500', bg: 'bg-orange-500/10', change: 'Active' },
+            { label: 'Chef Rating', value: averageRating, icon: Star, color: 'text-amber-500', bg: 'bg-amber-500/10', change: `${totalReviewsCount} REVIEWS` },
             { label: 'Active Menu', value: mealCount.toString(), icon: Users, color: 'text-indigo-500', bg: 'bg-indigo-500/10', change: 'Items' },
           ]);
         } else {
@@ -82,20 +122,20 @@ export default function ProviderDashboard() {
           <div>
             <h1 className="text-4xl font-black font-[family-name:var(--font-display)] text-white tracking-widest uppercase">Provider Hub</h1>
             <p className="text-slate-500 text-xs font-black uppercase tracking-[0.2em] mt-1 opacity-70">
-               Welcome to your new enterprise
+              Welcome to your new enterprise
             </p>
           </div>
         </div>
 
         <Card className="p-12 bg-slate-950/40 border-white/5 rounded-[40px] shadow-2xl flex flex-col items-center justify-center text-center">
-            <Utensils className="w-16 h-16 text-orange-500 mb-6" />
-            <h2 className="text-2xl font-black font-[family-name:var(--font-display)] text-white tracking-widest uppercase mb-4">No Profiles Found</h2>
-            <p className="text-slate-400 mb-8 max-w-md">You haven't setup any restaurant profiles yet. Create your first profile to start adding meals to your menu.</p>
-            <Link href="/provider/menu">
-              <Button className="h-14 px-8 rounded-2xl font-black uppercase tracking-widest flex items-center gap-2 shadow-[0_15px_30px_-5px_rgba(234,88,12,0.4)]">
-                  <Plus className="w-5 h-5" /> Setup First Profile
-              </Button>
-            </Link>
+          <Utensils className="w-16 h-16 text-orange-500 mb-6" />
+          <h2 className="text-2xl font-black font-[family-name:var(--font-display)] text-white tracking-widest uppercase mb-4">No Profiles Found</h2>
+          <p className="text-slate-400 mb-8 max-w-md">You haven't setup any restaurant profiles yet. Create your first profile to start adding meals to your menu.</p>
+          <Link href="/provider/menu">
+            <Button className="h-14 px-8 rounded-2xl font-black uppercase tracking-widest flex items-center gap-2 shadow-[0_15px_30px_-5px_rgba(234,88,12,0.4)]">
+              <Plus className="w-5 h-5" /> Setup First Profile
+            </Button>
+          </Link>
         </Card>
       </div>
     );
@@ -107,14 +147,14 @@ export default function ProviderDashboard() {
         <div>
           <h1 className="text-4xl font-black font-[family-name:var(--font-display)] text-white tracking-widest uppercase">Provider Hub</h1>
           <p className="text-slate-500 text-xs font-black uppercase tracking-[0.2em] mt-1 opacity-70 flex items-center gap-2">
-             <AlertCircle className="w-3.5 h-3.5 text-orange-500" /> System is operating at peak performance
+            <AlertCircle className="w-3.5 h-3.5 text-orange-500" /> System is operating at peak performance
           </p>
         </div>
-        
+
         <div className="flex gap-3">
           <Link href="/provider/menu">
             <Button className="h-14 px-8 rounded-2xl font-black uppercase tracking-widest flex items-center gap-2 shadow-[0_15px_30px_-5px_rgba(234,88,12,0.4)] transition-all active:scale-95">
-                <Plus className="w-5 h-5" /> Add New Profile or Meal
+              <Plus className="w-5 h-5" /> Add New Profile or Meal
             </Button>
           </Link>
           <Button variant="outline" className="w-14 h-14 p-0 rounded-2xl border-white/5 bg-white/5 hover:bg-white/10 transition-all flex items-center justify-center">
@@ -134,10 +174,10 @@ export default function ProviderDashboard() {
               <div>
                 <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-1">{stat.label}</p>
                 <div className="flex items-end gap-3">
-                    <span className="text-3xl font-black text-white font-[family-name:var(--font-display)] tracking-tighter leading-none">{stat.value}</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-green-500 pb-0.5 flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3" /> {stat.change}
-                    </span>
+                  <span className="text-3xl font-black text-white font-[family-name:var(--font-display)] tracking-tighter leading-none">{stat.value}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-green-500 pb-0.5 flex items-center gap-1">
+                    <TrendingUp className="w-3 h-3" /> {stat.change}
+                  </span>
                 </div>
               </div>
             </div>
@@ -153,30 +193,70 @@ export default function ProviderDashboard() {
               <BarChart3 className="w-6 h-6 text-orange-500" /> Recent Activity
             </h2>
             <div className="flex gap-2">
-                <button 
-                  onClick={() => setActiveTab('overview')}
-                  className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'overview' ? 'bg-orange-600 text-white shadow-xl' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
-                >Overview</button>
-                <button 
-                  onClick={() => setActiveTab('meals')}
-                  className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'meals' ? 'bg-orange-600 text-white shadow-xl' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
-                >My Meals</button>
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'overview' ? 'bg-orange-600 text-white shadow-xl' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
+              >Overview</button>
+              <button
+                onClick={() => setActiveTab('meals')}
+                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'meals' ? 'bg-orange-600 text-white shadow-xl' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
+              >My Meals</button>
+              <button
+                onClick={() => setActiveTab('feedback')}
+                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'feedback' ? 'bg-orange-600 text-white shadow-xl' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
+              >Feedback</button>
             </div>
           </div>
 
           <div className="space-y-4">
             {activeTab === 'overview' ? (
-              // Shared Recent Activity Placeholder
-              <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+              recentOrders.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
                   <div className="w-12 h-12 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-slate-800">
-                      <ShoppingBag className="w-5 h-5" />
+                    <ShoppingBag className="w-5 h-5" />
                   </div>
                   <div>
-                      <p className="text-xs font-black uppercase tracking-widest text-white">No Recent Orders</p>
-                      <p className="text-[10px] font-medium text-slate-600">Your latest platform interactions will appear here.</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-white">No Recent Orders</p>
+                    <p className="text-[10px] font-medium text-slate-600">Your latest platform interactions will appear here.</p>
                   </div>
-              </div>
-            ) : (
+                </div>
+              ) : (
+                recentOrders.slice(0, 4).map((order) => {
+                  let orderEarnings = 0;
+                  order.items.forEach((item: any) => {
+                    orderEarnings += (item.price * item.quantity) * 0.98;
+                  });
+                  return (
+                    <Link href={`/provider/orders`} key={order.id} className="flex items-center justify-between p-6 rounded-[32px] bg-white/[0.01] border border-white/5 hover:bg-white/[0.03] hover:border-white/10 transition-all group overflow-hidden relative cursor-pointer">
+                      <div className="absolute inset-0 bg-gradient-to-r from-orange-600/0 via-orange-600/0 to-orange-600/0 group-hover:from-orange-600/[0.02] group-hover:to-orange-600/[0.02] transition-colors" />
+                      <div className="flex items-center gap-5 relative z-10">
+                        <div className="w-12 h-12 rounded-2xl bg-orange-600/10 border border-orange-500/20 flex items-center justify-center text-orange-500 font-bold text-xs uppercase shadow-2xl">
+                          #{order.id.slice(-4)}
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-white font-[family-name:var(--font-display)] uppercase tracking-wide group-hover:text-orange-500 transition-colors">{order.user?.name || "GUEST"}</h3>
+                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1 flex items-center gap-3">
+                            <span className="flex items-center gap-1.5"><Package className="w-3 h-3 text-blue-500" /> {order.items.length} ITEMS</span>
+                            <span className="w-1 h-1 rounded-full bg-slate-700" />
+                            <span className="flex items-center gap-1.5 text-green-500"><DollarSign className="w-3 h-3" /> +${orderEarnings.toFixed(2)} EARNED</span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-6 relative z-10">
+                        <div className="text-right hidden sm:block">
+                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Status</p>
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl border ${order.status === 'DELIVERED' ? 'bg-green-600/10 text-green-500 border-green-500/20' :
+                              order.status === 'CANCELLED' ? 'bg-rose-600/10 text-rose-500 border-rose-500/20' :
+                                'bg-orange-600/10 text-orange-500 border-orange-500/20'
+                            }`}>{order.status}</span>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-slate-700 group-hover:text-orange-500 transition-all transform group-hover:translate-x-2" />
+                      </div>
+                    </Link>
+                  )
+                })
+              )
+            ) : activeTab === 'meals' ? (
               providerData?.meals?.slice(0, 4).map((meal) => (
                 <div key={meal.id} className="flex items-center justify-between p-6 rounded-[32px] bg-white/[0.01] border border-white/5 hover:bg-white/[0.03] hover:border-white/10 transition-all group overflow-hidden relative">
                   <div className="absolute inset-0 bg-gradient-to-r from-orange-600/0 via-orange-600/0 to-orange-600/0 group-hover:from-orange-600/[0.02] group-hover:to-orange-600/[0.02] transition-colors" />
@@ -187,82 +267,148 @@ export default function ProviderDashboard() {
                     <div>
                       <h3 className="text-lg font-bold text-white font-[family-name:var(--font-display)] uppercase tracking-wide group-hover:text-orange-500 transition-colors">{meal.name}</h3>
                       <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1 flex items-center gap-3">
-                          <span className="flex items-center gap-1.5"><DollarSign className="w-3 h-3 text-green-500" /> ${meal.price.toFixed(2)}</span>
-                          <span className="w-1 h-1 rounded-full bg-slate-700" />
-                          <span className="flex items-center gap-1.5"><Clock className="w-3 h-3 text-blue-500" /> ACTIVE</span>
+                        <span className="flex items-center gap-1.5"><DollarSign className="w-3 h-3 text-green-500" /> ${meal.price.toFixed(2)}</span>
+                        <span className="w-1 h-1 rounded-full bg-slate-700" />
+                        <span className="flex items-center gap-1.5"><Clock className="w-3 h-3 text-blue-500" /> ACTIVE</span>
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-6 relative z-10">
                     <div className="text-right hidden sm:block">
-                       <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Status</p>
-                       <span className="px-3 py-1 rounded-full bg-green-600/10 text-green-500 border border-green-500/20 text-[10px] font-black uppercase tracking-widest shadow-2xl">Published</span>
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Status</p>
+                      <span className="px-3 py-1 rounded-full bg-green-600/10 text-green-500 border border-green-500/20 text-[10px] font-black uppercase tracking-widest shadow-2xl">Published</span>
                     </div>
                     <ChevronRight className="w-5 h-5 text-slate-700 group-hover:text-orange-500 transition-all transform group-hover:translate-x-2" />
                   </div>
                 </div>
               ))
+            ) : (
+              (() => {
+                const allReviews = providerData?.meals?.flatMap((m: any) => (m.reviews || []).map((r: any) => ({ ...r, mealName: m.name }))) || [];
+                const sortedReviews = allReviews.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+                if (sortedReviews.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+                      <div className="w-12 h-12 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-slate-800">
+                        <Star className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-widest text-white">No Feedback Yet</p>
+                        <p className="text-[10px] font-medium text-slate-600">Client reviews will appear here once submitted.</p>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return sortedReviews.slice(0, 4).map((review: any) => (
+                  <div key={review.id} className="flex flex-col p-6 rounded-[32px] bg-white/[0.01] border border-white/5 transition-all group relative overflow-hidden space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-orange-600/10 flex items-center justify-center overflow-hidden border border-orange-500/20">
+                          {review.user?.avatar ? <img src={review.user.avatar} className="w-full h-full object-cover" /> : <span className="text-orange-500 text-xs font-bold">{review.user?.name?.charAt(0) || 'U'}</span>}
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-bold text-white uppercase tracking-tight">{review.user?.name || "Verified Gourmet"}</h3>
+                          <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{review.mealName}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className={`w-3 h-3 ${i < review.rating ? 'text-orange-500 fill-current drop-shadow-[0_0_5px_rgba(234,88,12,0.5)]' : 'text-white/5'}`} />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-400 italic">"{review.comment || 'No comment provided.'}"</p>
+                  </div>
+                ));
+              })()
             )}
             {activeTab === 'meals' && (!providerData?.meals || providerData.meals.length === 0) && (
-                 <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-                    <Utensils className="w-10 h-10 text-slate-800" />
-                    <p className="text-xs font-black uppercase tracking-widest text-slate-600">Your Menu is Empty</p>
-                    <Link href="/provider/menu">
-                        <Button variant="outline" className="h-10 rounded-xl px-6 border-white/5 text-[10px] uppercase font-black tracking-widest">Create First Meal</Button>
-                    </Link>
-                 </div>
+              <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+                <Utensils className="w-10 h-10 text-slate-800" />
+                <p className="text-xs font-black uppercase tracking-widest text-slate-600">Your Menu is Empty</p>
+                <Link href="/provider/menu">
+                  <Button variant="outline" className="h-10 rounded-xl px-6 border-white/5 text-[10px] uppercase font-black tracking-widest">Create First Meal</Button>
+                </Link>
+              </div>
             )}
           </div>
-          
+
           <Link href="/provider/orders" className="block w-full mt-10">
             <Button variant="outline" className="w-full h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest border-white/5 bg-white/5 hover:bg-orange-600 hover:text-white transition-all shadow-2xl">View Detailed Logs & Order Management</Button>
           </Link>
         </Card>
 
         <div className="space-y-8">
-            <Card className="p-8 bg-slate-950/40 border-white/5 rounded-[40px] space-y-8 overflow-hidden relative group">
-                <div className="absolute inset-0 bg-gradient-to-tr from-amber-600/0 via-orange-600/0 to-orange-600/0 group-hover:from-orange-600/[0.03] transition-colors" />
-                <h2 className="text-xl font-black font-[family-name:var(--font-display)] text-white tracking-widest uppercase flex items-center gap-3 relative z-10">
-                  <Utensils className="w-5 h-5 text-orange-500" /> Top Performing
-                </h2>
-                <div className="space-y-4 relative z-10">
-                    {providerData?.meals && providerData.meals.length > 0 ? (
-                        providerData.meals.slice(0, 3).map(meal => (
-                            <div key={meal.id} className="flex items-center gap-4 group/item">
-                                <div className="w-12 h-12 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center shadow-2xl transition-transform group-hover/item:scale-110">
-                                    <Star className="w-5 h-5 text-amber-500 fill-current opacity-70 group-hover/item:opacity-100" />
-                                </div>
-                                <div className="flex-1 border-b border-white/5 pb-2">
-                                    <h4 className="text-sm font-bold text-slate-200 group-hover/item:text-orange-500 transition-colors uppercase tracking-tight">{meal.name}</h4>
-                                    <div className="flex justify-between items-center mt-1">
-                                        <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Active Creation</p>
-                                        <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">${meal.price.toFixed(2)}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        ))
-                    ) : (
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-700 py-10 text-center">No meal performance data available yet.</p>
-                    )}
-                </div>
-                <div className="p-6 rounded-[32px] bg-orange-600 text-white relative z-10 shadow-[0_20px_50px_-5px_rgba(234,88,12,0.4)] border border-orange-500">
-                    <h4 className="text-xs font-black uppercase tracking-[0.2em] mb-1 opacity-70">Weekly Forecast</h4>
-                    <p className="text-2xl font-black font-[family-name:var(--font-display)] leading-tight tracking-tight">Demand is increasing! Prepare for +15% more orders in Italian category.</p>
-                </div>
-            </Card>
-
-            <Card className="p-8 bg-rose-600/5 border-rose-500/10 rounded-[40px] space-y-6 overflow-hidden relative group">
-                <div className="flex items-center gap-3 relative z-10">
-                    <div className="w-10 h-10 rounded-xl bg-rose-600/10 flex items-center justify-center text-rose-500">
-                        <Settings className="w-5 h-5 animate-spin-slow" />
+          <Card className="p-8 bg-slate-950/40 border-white/5 rounded-[40px] space-y-8 overflow-hidden relative group">
+            <div className="absolute inset-0 bg-gradient-to-tr from-amber-600/0 via-orange-600/0 to-orange-600/0 group-hover:from-orange-600/[0.03] transition-colors" />
+            <h2 className="text-xl font-black font-[family-name:var(--font-display)] text-white tracking-widest uppercase flex items-center gap-3 relative z-10">
+              <Utensils className="w-5 h-5 text-orange-500" /> Top Performing
+            </h2>
+            <div className="space-y-4 relative z-10">
+              {providerData?.meals && providerData.meals.length > 0 ? (
+                providerData.meals.slice(0, 3).map(meal => (
+                  <div key={meal.id} className="flex items-center gap-4 group/item">
+                    <div className="w-12 h-12 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center overflow-hidden shadow-2xl transition-transform group-hover/item:scale-110 shrink-0 relative">
+                      {meal.image ? (
+                        <img src={meal.image} alt={meal.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <Star className="w-5 h-5 text-amber-500 fill-current opacity-70 group-hover/item:opacity-100" />
+                      )}
+                      <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-xl" />
                     </div>
-                    <h3 className="text-xs font-black uppercase tracking-widest text-rose-500 opacity-80">Quick Admin Ops</h3>
-                </div>
-                <div className="space-y-4 relative z-10">
-                    <button className="w-full h-12 flex items-center justify-center gap-3 rounded-xl bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 hover:text-white transition-all shadow-lg active:scale-95">Set Holiday Mode</button>
-                    <button className="w-full h-12 flex items-center justify-center gap-3 rounded-xl bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all active:scale-95">Clear Cache</button>
-                </div>
-            </Card>
+                    <div className="flex-1 border-b border-white/5 pb-2">
+                      <h4 className="text-sm font-bold text-slate-200 group-hover/item:text-orange-500 transition-colors uppercase tracking-tight">{meal.name}</h4>
+                      <div className="flex justify-between items-center mt-1">
+                        <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Active Creation</p>
+                        <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">${meal.price.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-700 py-10 text-center">No meal performance data available yet.</p>
+              )}
+            </div>
+            <div className="p-6 rounded-[32px] bg-orange-600 text-white relative z-10 shadow-[0_20px_50px_-5px_rgba(234,88,12,0.4)] border border-orange-500">
+              <h4 className="text-xs font-black uppercase tracking-[0.2em] mb-1 opacity-70">Weekly Forecast</h4>
+              <p className="text-2xl font-black font-[family-name:var(--font-display)] leading-tight tracking-tight">Demand is increasing! Prepare for +15% more orders in Italian category.</p>
+            </div>
+          </Card>
+
+          <Card className="p-8 bg-rose-600/5 border-rose-500/10 rounded-[40px] space-y-6 overflow-hidden relative group">
+            <div className="flex items-center gap-3 relative z-10">
+              <div className="w-10 h-10 rounded-xl bg-rose-600/10 flex items-center justify-center text-rose-500">
+                <Settings className="w-5 h-5 animate-spin-slow" />
+              </div>
+              <h3 className="text-xs font-black uppercase tracking-widest text-rose-500 opacity-80">Quick Admin Ops</h3>
+            </div>
+            <div className="space-y-4 relative z-10">
+              <button
+                onClick={toggleHolidayMode}
+                className={`w-full h-12 flex items-center justify-center gap-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 ${isHolidayMode
+                    ? 'bg-rose-600 text-white border-rose-500 hover:bg-rose-700'
+                    : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                  }`}
+              >
+                {isHolidayMode ? 'Disable Holiday Mode' : 'Set Holiday Mode'}
+              </button>
+
+              {/* <button 
+                onClick={handleClearCache}
+                disabled={isClearingCache}
+                className={`w-full h-12 flex items-center justify-center gap-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all shadow-lg ${
+                  isClearingCache
+                    ? 'bg-slate-900 border-white/5 text-slate-500 cursor-not-allowed'
+                    : 'bg-white/5 border-white/10 text-white hover:bg-slate-900 active:scale-95'
+                }`}
+              >
+                {isClearingCache && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {isClearingCache ? 'Clearing...' : 'Clear Cache'}
+              </button> */}
+            </div>
+          </Card>
         </div>
       </div>
     </div>

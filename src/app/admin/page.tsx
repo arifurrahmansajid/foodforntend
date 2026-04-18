@@ -16,7 +16,7 @@ import { useRouter } from "next/navigation";
 import { User, Meal, Category, Provider } from "@/types";
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'providers' | 'meals' | 'categories'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'providers' | 'meals' | 'categories' | 'cancellations' | 'reviews'>('overview');
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const { user, token } = useAuth();
@@ -28,6 +28,8 @@ export default function AdminDashboard() {
   const [providers, setProviders] = useState<any[]>([]);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [cancelledOrders, setCancelledOrders] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
 
   const loadData = async () => {
     try {
@@ -40,11 +42,13 @@ export default function AdminDashboard() {
         adminApi.getCategories()
       ]);
 
-      setStats(statsRes.data.data.stats || { totalUsers: 0, totalProviders: 0, totalMeals: 0, totalOrders: 0, totalRevenue: 0 });
+      setStats(statsRes.data.data.stats || { totalUsers: 0, totalProviders: 0, totalMeals: 0, totalOrders: 0, totalRevenue: 0, totalSellerEarnings: 0, totalAdminCommission: 0, avgRating: 0 });
       setUsers(usersRes.data.data.users || []);
       setMeals(mealsRes.data.data.meals || []);
       setCategories(categoriesRes.data.data.categories || []);
       setProviders(providersRes.data.data.providers || []);
+      setCancelledOrders(statsRes.data.data.cancelledOrders || []);
+      setReviews(statsRes.data.data.reviews || []);
     } catch (error: any) {
       console.error("Admin Load Error:", error);
       if (error?.response?.status === 401) {
@@ -58,7 +62,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Wait for auth state to be loaded from localStorage before making API calls
   useEffect(() => {
     if (token && user?.role === 'ADMIN') {
       loadData();
@@ -66,8 +69,6 @@ export default function AdminDashboard() {
       toast.error('Access Denied: Admin privileges required.');
       router.push('/');
     } else if (!token) {
-      // No token yet - could be loading or not logged in
-      // Give Zustand a moment to rehydrate from localStorage
       const timer = setTimeout(() => {
         const currentToken = useAuth.getState().token;
         const currentUser = useAuth.getState().user;
@@ -119,7 +120,7 @@ export default function AdminDashboard() {
         </div>
         
         <div className="flex bg-white/[0.02] p-1.5 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar">
-            {['overview', 'users', 'providers', 'meals', 'categories'].map((tab: any) => (
+            {['overview', 'users', 'providers', 'meals', 'categories', 'cancellations', 'reviews'].map((tab: any) => (
                 <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -138,7 +139,7 @@ export default function AdminDashboard() {
                 {[
                     { label: 'Platform Users', value: stats?.totalUsers || 0, icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
                     { label: 'Verified Partners', value: stats?.totalProviders || 0, icon: ShieldCheck, color: 'text-orange-500', bg: 'bg-orange-500/10' },
-                    { label: 'Total Menus', value: stats?.totalMeals || 0, icon: Utensils, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+                    { label: 'Chef Rating', value: stats?.avgRating?.toFixed(1) || '0.0', icon: Utensils, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
                     { label: 'Global Volume', value: stats?.totalOrders || 0, icon: Package, color: 'text-green-500', bg: 'bg-green-500/10' },
                 ].map((stat, i) => (
                     <Card key={i} className="p-8 bg-white/[0.02] border-white/5 rounded-[32px] overflow-hidden relative group">
@@ -159,12 +160,30 @@ export default function AdminDashboard() {
                     <h2 className="text-xl font-black font-[family-name:var(--font-display)] text-white tracking-widest uppercase flex items-center gap-3 mb-10 pb-6 border-b border-white/5">
                         <TrendingUp className="w-6 h-6 text-orange-500" /> Revenue Integrity
                     </h2>
-                    <div className="flex items-center justify-center py-20 text-center flex-col">
-                        <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center text-green-500 mb-6">
-                            <DollarSign className="w-10 h-10" />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                        <div className="flex items-center justify-center p-6 text-center flex-col bg-white/[0.02] rounded-[32px] border border-white/5">
+                            <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center text-green-500 mb-4">
+                                <DollarSign className="w-6 h-6" />
+                            </div>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Total Gross</p>
+                            <h3 className="text-3xl font-black text-white font-[family-name:var(--font-display)]">${(stats?.totalRevenue || 0).toFixed(2)}</h3>
                         </div>
-                        <p className="text-sm font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Total Platform Gross</p>
-                        <h3 className="text-6xl font-black text-white font-[family-name:var(--font-display)]">${(stats?.totalRevenue || 0).toFixed(2)}</h3>
+
+                        <div className="flex items-center justify-center p-6 text-center flex-col bg-white/[0.02] rounded-[32px] border border-white/5">
+                            <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500 mb-4">
+                                <ShoppingBag className="w-6 h-6" />
+                            </div>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Seller Earnings (98%)</p>
+                            <h3 className="text-3xl font-black text-white font-[family-name:var(--font-display)]">${(stats?.totalSellerEarnings || 0).toFixed(2)}</h3>
+                        </div>
+
+                        <div className="flex items-center justify-center p-6 text-center flex-col bg-orange-600/10 rounded-[32px] border border-orange-500/20">
+                            <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500 mb-4">
+                                <ShieldCheck className="w-6 h-6" />
+                            </div>
+                            <p className="text-[10px] font-black text-white uppercase tracking-[0.2em] mb-1">Admin Fee (2%)</p>
+                            <h3 className="text-3xl font-black text-orange-500 font-[family-name:var(--font-display)]">${(stats?.totalAdminCommission || 0).toFixed(2)}</h3>
+                        </div>
                     </div>
                 </Card>
 
@@ -275,7 +294,7 @@ export default function AdminDashboard() {
                              <div className="w-20 h-20 rounded-[32px] bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center p-2 group-hover:bg-white/10 group-hover:scale-110 transition-all duration-500">
                                 {cat.image ? (
                                     <img src={cat.image} className="w-full h-full object-cover rounded-[24px]" />
-                                ) : (
+                               ) : (
                                     <Layers className="w-10 h-10 text-slate-800" />
                                 )}
                              </div>
@@ -399,6 +418,153 @@ export default function AdminDashboard() {
                                     </td>
                                 </tr>
                             ))}
+                        </tbody>
+                    </table>
+                </div>
+             </Card>
+        </div>
+      )}
+
+      {activeTab === 'cancellations' && (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+             <Card className="p-0 bg-slate-950/40 border-white/5 backdrop-blur-2xl rounded-[40px] overflow-hidden">
+                <div className="p-8 border-b border-white/5 flex items-center justify-between">
+                    <h2 className="text-xl font-black font-[family-name:var(--font-display)] text-white tracking-widest uppercase">Voided Requests</h2>
+                    <div className="px-4 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-[10px] font-black uppercase tracking-widest">
+                        {cancelledOrders.length} Total Cancellations
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="bg-white/[0.02]">
+                            <tr>
+                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500">Order Protocol</th>
+                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500">Customer Identity</th>
+                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500">Voided Value</th>
+                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Termination Date</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {cancelledOrders.length === 0 ? (
+                                <tr>
+                                    <td colSpan={4} className="px-8 py-20 text-center">
+                                        <div className="flex flex-col items-center justify-center opacity-30">
+                                            <Package className="w-12 h-12 mb-4" />
+                                            <p className="text-xs font-black uppercase tracking-widest">No cancellations documented.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                cancelledOrders.map((order: any) => (
+                                    <tr key={order.id} className="hover:bg-white/[0.01] transition-colors group">
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-xl bg-rose-600/10 border border-rose-500/20 flex items-center justify-center text-rose-500">
+                                                    <XCircle className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-white group-hover:text-rose-500 transition-colors uppercase">#{order.id.slice(-8).toUpperCase()}</p>
+                                                    <p className="text-[10px] font-medium text-slate-500">{order.items.length} items voided</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="space-y-1">
+                                                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{order.user?.name}</p>
+                                                <p className="text-[9px] text-slate-600">{order.user?.email}</p>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <span className="text-lg font-black text-rose-500 font-[family-name:var(--font-display)]">${order.total.toFixed(2)}</span>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                {new Date(order.updatedAt).toLocaleDateString()}
+                                            </p>
+                                            <p className="text-[9px] text-slate-600">
+                                                {new Date(order.updatedAt).toLocaleTimeString()}
+                                            </p>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+             </Card>
+        </div>
+      )}
+
+      {activeTab === 'reviews' && (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+             <Card className="p-0 bg-slate-950/40 border-white/5 backdrop-blur-2xl rounded-[40px] overflow-hidden">
+                <div className="p-8 border-b border-white/5 flex items-center justify-between">
+                    <h2 className="text-xl font-black font-[family-name:var(--font-display)] text-white tracking-widest uppercase">Client Feedback</h2>
+                    <div className="px-4 py-2 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-500 text-[10px] font-black uppercase tracking-widest">
+                        {reviews.length} Recent Reviews
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="bg-white/[0.02]">
+                            <tr>
+                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500">Customer</th>
+                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500">Service Asset</th>
+                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500">Rating</th>
+                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500">Message</th>
+                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {reviews.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="px-8 py-20 text-center">
+                                        <div className="flex flex-col items-center justify-center opacity-30">
+                                            <Utensils className="w-12 h-12 mb-4" />
+                                            <p className="text-xs font-black uppercase tracking-widest">No customer feedback yet.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                reviews.map((review: any) => (
+                                    <tr key={review.id} className="hover:bg-white/[0.01] transition-colors group">
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-xl bg-slate-800 border border-white/5 flex items-center justify-center text-xs font-bold text-white overflow-hidden">
+                                                    {review.user?.avatar ? (
+                                                        <img src={review.user.avatar} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        review.user?.name?.charAt(0) || 'U'
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-white group-hover:text-orange-500 transition-colors uppercase">{review.user?.name}</p>
+                                                    <p className="text-[10px] font-medium text-slate-500 italic">Verified Gourmet</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{review.meal?.name || 'Unknown Item'}</span>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-1">
+                                                {[...Array(5)].map((_, i) => (
+                                                    <span key={i} className={`w-2 h-2 rounded-full ${i < review.rating ? 'bg-orange-500 shadow-[0_0_8px_rgba(234,88,12,0.6)]' : 'bg-white/5'}`} />
+                                                ))}
+                                                <span className="ml-2 text-[10px] font-black text-white">{review.rating.toFixed(1)}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6 max-w-xs">
+                                            <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">&ldquo;{review.comment || 'No comment provided.'}&rdquo;</p>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                                {new Date(review.createdAt).toLocaleDateString()}
+                                            </p>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
