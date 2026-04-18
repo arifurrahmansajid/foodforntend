@@ -45,6 +45,11 @@ export default function MealsPage() {
   const [priceRange, setPriceRange] = useState(1000);
   const [sortBy, setSortBy] = useState("Newest First");
   const [sortOrder, setSortOrder] = useState("Descending");
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCuisine, selectedDietary, selectedMealType, selectedSpiceLevel, priceRange, sortBy, sortOrder]);
   
   // --- Pagination ---
   const [currentPage, setCurrentPage] = useState(1);
@@ -206,9 +211,12 @@ export default function MealsPage() {
               <h3 className="text-white font-bold mb-4 flex items-center justify-between">Cuisine</h3>
               <div className="space-y-3">
                 {cuisines.map(cuisine => (
-                  <label key={cuisine} className="flex items-center gap-3 group cursor-pointer">
+                  <label 
+                    key={cuisine} 
+                    className="flex items-center gap-3 group cursor-pointer"
+                    onClick={() => setSelectedCuisine(cuisine)}
+                  >
                     <div 
-                      onClick={() => setSelectedCuisine(cuisine)}
                       className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                         selectedCuisine === cuisine ? 'border-orange-500' : 'border-slate-700 group-hover:border-slate-500'
                       }`}
@@ -228,9 +236,12 @@ export default function MealsPage() {
               <h3 className="text-white font-bold mb-4">Dietary</h3>
               <div className="space-y-3">
                 {DIETARY_DEFAULTS.map(diet => (
-                  <label key={diet} className="flex items-center gap-3 group cursor-pointer">
+                  <label 
+                    key={diet} 
+                    className="flex items-center gap-3 group cursor-pointer"
+                    onClick={() => toggleDietary(diet)}
+                  >
                     <div 
-                      onClick={() => toggleDietary(diet)}
                       className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
                         selectedDietary.includes(diet) ? 'border-orange-500 bg-orange-500/20' : 'border-slate-700 group-hover:border-slate-500'
                       }`}
@@ -250,9 +261,12 @@ export default function MealsPage() {
               <h3 className="text-white font-bold mb-4">Meal Type</h3>
               <div className="space-y-3">
                 {MEAL_TYPES.map(type => (
-                  <label key={type} className="flex items-center gap-3 group cursor-pointer">
+                  <label 
+                    key={type} 
+                    className="flex items-center gap-3 group cursor-pointer"
+                    onClick={() => setSelectedMealType(type)}
+                  >
                     <div 
-                      onClick={() => setSelectedMealType(type)}
                       className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                         selectedMealType === type ? 'border-orange-500' : 'border-slate-700 group-hover:border-slate-500'
                       }`}
@@ -272,9 +286,12 @@ export default function MealsPage() {
               <h3 className="text-white font-bold mb-4">Spice Level</h3>
               <div className="space-y-3">
                 {SPICE_LEVELS.map(level => (
-                  <label key={level} className="flex items-center gap-3 group cursor-pointer">
+                  <label 
+                    key={level} 
+                    className="flex items-center gap-3 group cursor-pointer"
+                    onClick={() => setSelectedSpiceLevel(level)}
+                  >
                     <div 
-                      onClick={() => setSelectedSpiceLevel(level)}
                       className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                         selectedSpiceLevel === level ? 'border-orange-500' : 'border-slate-700 group-hover:border-slate-500'
                       }`}
@@ -312,9 +329,12 @@ export default function MealsPage() {
               <h3 className="text-white font-bold mb-4">Sort By</h3>
               <div className="space-y-3">
                 {SORT_BY.map(s => (
-                  <label key={s} className="flex items-center gap-3 group cursor-pointer">
+                  <label 
+                    key={s} 
+                    className="flex items-center gap-3 group cursor-pointer"
+                    onClick={() => setSortBy(s)}
+                  >
                     <div 
-                      onClick={() => setSortBy(s)}
                       className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                         sortBy === s ? 'border-orange-500' : 'border-slate-700 group-hover:border-slate-500'
                       }`}
@@ -334,9 +354,12 @@ export default function MealsPage() {
               <h3 className="text-white font-bold mb-4">Sort Order</h3>
               <div className="space-y-3">
                 {SORT_ORDER.map(o => (
-                  <label key={o} className="flex items-center gap-3 group cursor-pointer">
+                  <label 
+                    key={o} 
+                    className="flex items-center gap-3 group cursor-pointer"
+                    onClick={() => setSortOrder(o)}
+                  >
                     <div 
-                      onClick={() => setSortOrder(o)}
                       className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                         sortOrder === o ? 'border-orange-500' : 'border-slate-700 group-hover:border-slate-500'
                       }`}
